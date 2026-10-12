@@ -1,3 +1,4 @@
+
 import { createContext, useState, useEffect, useContext } from "react";
 import { useAuthContext } from "./AuthContext";
 import io from "socket.io-client";
@@ -15,27 +16,37 @@ export const SocketContextProvider = ({ children }) => {
 
 	useEffect(() => {
 		if (authUser) {
-			const socket = io("http://localhost:5001", {
+			const socketUrl = import.meta.env.PROD
+				? "https://vynq-chat-backend.onrender.com"
+				: "http://localhost:5001";
+
+			const newSocket = io(socketUrl, {
 				query: {
 					userId: authUser._id,
 				},
 			});
 
-			setSocket(socket);
+			setSocket(newSocket);
 
-			// socket.on() is used to listen to the events. can be used both on client and server side
-			socket.on("getOnlineUsers", (users) => {
+			newSocket.on("getOnlineUsers", (users) => {
 				setOnlineUsers(users);
 			});
 
-			return () => socket.close();
+			return () => {
+				newSocket.close();
+			};
 		} else {
 			if (socket) {
 				socket.close();
 				setSocket(null);
 			}
+			setOnlineUsers([]);
 		}
 	}, [authUser]);
 
-	return <SocketContext.Provider value={{ socket, onlineUsers }}>{children}</SocketContext.Provider>;
+	return (
+		<SocketContext.Provider value={{ socket, onlineUsers }}>
+			{children}
+		</SocketContext.Provider>
+	);
 };
